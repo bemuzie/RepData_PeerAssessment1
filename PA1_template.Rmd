@@ -7,19 +7,83 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r}
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(lubridate)
+library(knitr)
 
+
+raw_data <- read.csv("activity.csv")
+act_data <- raw_data %>%
+                    tbl_df() %>%
+                    mutate(date=as.Date(date),
+                           day=factor(wday(date,label = TRUE, abbr = TRUE)),
+                           weekend=factor(ifelse(day %in% c('Sun','Sat'),'weekend','weekday')),
+                           month=factor(month(date,label = TRUE, abbr = TRUE)),
+                           interval=parse_date_time(sprintf("%04d", interval),'hM') #convert intervals to time
+                           ) 
+summary(act_data)
+```
 
 
 ## What is mean total number of steps taken per day?
+```{r}
 
+act_data %>%
+  na.exclude() %>%
+  group_by(date) %>%
+  summarise(day_steps=sum(steps,na.rm=TRUE)) -> day_act
+qplot(day_steps,data=day_act, geom='histogram',binwidth=2000)
+
+mean_per_day <- mean(day_act$day_steps)
+median_per_day <- median(day_act$day_steps)
+
+```
+
+The mean total number of steps taken per day was `r mean_per_day`. Median was `r median_per_day`.
 
 
 ## What is the average daily activity pattern?
-
-
+```{r,message=FALSE, warning=FALSE}
+act_data %>%
+  na.exclude() %>%
+  group_by(interval) %>%
+  summarise(mean=mean(steps)) -> daily_act
+p <- ggplot(act_data,aes(interval,steps))
+p + geom_smooth()+
+    geom_line(aes(interval,mean),data=daily_act,col='red')+
+    scale_x_datetime("",labels=date_format("%H:%M"))
+```
 
 ## Imputing missing values
+```{r,message=FALSE, warning=FALSE, results='asis'}
+act_data %>%
+  group_by(date) %>%
+  summarise(na_sum=100* sum(is.na(steps))/n() ) -> nas
+  kable(data.frame(table(nas$na_sum)),
+        format = "markdown",
+        col.names=c("per day NA's proportion,%","Frequency"))
+```
+
+First we looking when NA's values have occured. So we calculate a proportion of NA values for each day. We see in `r table(nas$na_sum)`,There are `r sum(nas$na_sum==1)` whole days of missing data and `r sum(nas$na_sum!=1 & nas$na_sum!=0)` of partially missing days. Its make values interpolation impossible and the best way is to through them out from data analisis.
+
+```{r,message=FALSE, warning=FALSE}
+act_data<-na.exclude(act_data)
+```
 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r, message=FALSE, warning=FALSE}
+
+p <- ggplot(act_data,aes(interval,steps))
+
+  p +facet_grid(weekend~.)+
+    stat_smooth(size=3,colour='black')+
+    stat_smooth(aes(colour=factor(day)),se=F,alpha=0.5)+
+    scale_x_datetime("",labels=date_format("%H:%M"))
+
+```
+
