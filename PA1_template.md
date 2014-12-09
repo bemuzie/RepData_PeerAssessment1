@@ -36,26 +36,6 @@ act_data <- raw_data %>%
                            month=factor(month(date,label = TRUE, abbr = TRUE)),
                            interval=parse_date_time(sprintf("%04d", interval),'hM') #convert intervals to time
                            ) 
-summary(act_data)
-```
-
-```
-##      steps             date               interval               
-##  Min.   :  0.00   Min.   :2012-10-01   Min.   :0-01-01 00:00:00  
-##  1st Qu.:  0.00   1st Qu.:2012-10-16   1st Qu.:0-01-01 05:58:45  
-##  Median :  0.00   Median :2012-10-31   Median :0-01-01 11:57:30  
-##  Mean   : 37.38   Mean   :2012-10-31   Mean   :0-01-01 11:57:30  
-##  3rd Qu.: 12.00   3rd Qu.:2012-11-15   3rd Qu.:0-01-01 17:56:15  
-##  Max.   :806.00   Max.   :2012-11-30   Max.   :0-01-01 23:55:00  
-##  NA's   :2304                                                    
-##     day          weekend      month     
-##  Sun  :2304   weekday:12960   Oct:8928  
-##  Mon  :2592   weekend: 4608   Nov:8640  
-##  Tues :2592                             
-##  Wed  :2592                             
-##  Thurs:2592                             
-##  Fri  :2592                             
-##  Sat  :2304
 ```
 
 
@@ -124,11 +104,23 @@ act_data<-na.exclude(act_data)
 ## Are there differences in activity patterns between weekdays and weekends?
 
 ```r
-p <- ggplot(act_data,aes(interval,steps))
-p +facet_grid(weekend~.)+
-  stat_smooth(size=3,colour='black')+
-  stat_smooth(aes(colour=factor(day)),se=F,alpha=0.5)+
-  scale_x_datetime("",labels=date_format("%H:%M"))
+act_data %>%
+  group_by(interval,day) %>%
+  summarise(mean_per_day=mean(steps),weekend=weekend[1]) -> per_day_activity
+
+act_data %>%
+  group_by(interval,weekend) %>%
+  summarise(mean_per_day=mean(steps)) -> day_end_activity
+
+  
+
+p <- ggplot(day_end_activity,aes(interval,mean_per_day))
+
+  p +
+    geom_line(aes(interval,mean_per_day),size=2,colour='black')+
+    geom_line(aes(interval,mean_per_day,color=day),per_day_activity,size=1,alpha=0.3)+
+    facet_grid(weekend~.)+
+    scale_x_datetime("",labels=date_format("%H:%M"))
 ```
 
 ![](PA1_template_files/figure-html/unnamed-chunk-6-1.png) 

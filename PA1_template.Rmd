@@ -24,7 +24,6 @@ act_data <- raw_data %>%
                            month=factor(month(date,label = TRUE, abbr = TRUE)),
                            interval=parse_date_time(sprintf("%04d", interval),'hM') #convert intervals to time
                            ) 
-summary(act_data)
 ```
 
 
@@ -77,12 +76,22 @@ act_data<-na.exclude(act_data)
 
 ## Are there differences in activity patterns between weekdays and weekends?
 ```{r, message=FALSE, warning=FALSE}
+act_data %>%
+  group_by(interval,day) %>%
+  summarise(mean_per_day=mean(steps),weekend=weekend[1]) -> per_day_activity
 
-p <- ggplot(act_data,aes(interval,steps))
+act_data %>%
+  group_by(interval,weekend) %>%
+  summarise(mean_per_day=mean(steps)) -> day_end_activity
 
-  p +facet_grid(weekend~.)+
-    stat_smooth(size=3,colour='black')+
-    stat_smooth(aes(colour=factor(day)),se=F,alpha=0.5)+
+  
+
+p <- ggplot(day_end_activity,aes(interval,mean_per_day))
+
+  p +
+    geom_line(aes(interval,mean_per_day),size=2,colour='black')+
+    geom_line(aes(interval,mean_per_day,color=day),per_day_activity,size=1,alpha=0.3)+
+    facet_grid(weekend~.)+
     scale_x_datetime("",labels=date_format("%H:%M"))
 
 ```
